@@ -48,6 +48,29 @@ echo "Setting up application directory: $APP_DIR"
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 
+# Stop any process using port 3000
+echo "Checking for processes using port 3000..."
+if sudo lsof -i :3000; then
+    echo "Stopping processes using port 3000..."
+    sudo fuser -k 3000/tcp || true
+fi
+
+# Stop any process using port 80
+echo "Checking for processes using port 80..."
+if sudo lsof -i :80; then
+    echo "Stopping processes using port 80..."
+    sudo fuser -k 80/tcp || true
+fi
+
+# Stop and remove all containers
+echo "Stopping and removing all containers..."
+docker-compose down --remove-orphans || true
+docker rm -f $(docker ps -aq) || true
+
+# Remove old volumes and networks
+echo "Cleaning up Docker system..."
+docker system prune -f --volumes
+
 # Copy configuration files
 echo "Copying configuration files..."
 cat > docker-compose.yml <<EOL
@@ -109,10 +132,6 @@ server {
 }
 EOL
 
-# Stop any existing containers
-echo "Stopping existing containers..."
-docker-compose down --remove-orphans
-
 # Pull the latest images
 echo "Pulling latest images..."
 docker-compose pull
@@ -123,7 +142,7 @@ docker-compose up -d
 
 # Wait for health checks
 echo "Waiting for services to be healthy..."
-sleep 10
+sleep 20
 
 # Check container status
 echo "Checking container status..."
@@ -144,6 +163,8 @@ if curl -s -f "http://localhost" > /dev/null; then
     echo "Application is responding successfully"
 else
     echo "Warning: Application is not responding on port 80"
+    echo "Checking container logs for potential issues..."
+    docker-compose logs
 fi
 
 echo -e "\nUseful commands:"
