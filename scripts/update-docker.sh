@@ -3,8 +3,19 @@
 # Exit on any error
 set -e
 
+# Check for required arguments
+if [ -z "$1" ]; then
+    echo "Error: Docker username is required"
+    echo "Usage: $0 <docker-username> [tag]"
+    exit 1
+fi
+
+DOCKER_USERNAME="$1"
+export DOCKER_USERNAME
+export TAG="${2:-latest}"
+
 # Navigate to app directory
-APP_DIR="/home/ec twice-user/ai_restaraunt-review-manager-website"
+APP_DIR="/home/ec2-user/ai_restaraunt-review-manager-website"
 echo "Navigating to application directory: $APP_DIR"
 cd "$APP_DIR"
 
@@ -17,14 +28,14 @@ echo "Stopping existing containers..."
 docker-compose down --remove-orphans
 docker system prune -f
 
-# Rebuild and restart containers
-echo "Rebuilding and starting containers..."
-docker-compose build --no-cache
+# Pull and restart containers
+echo "Pulling latest images and starting containers..."
+docker-compose pull
 docker-compose up -d
 
 # Wait for health checks
 echo "Waiting for services to be healthy..."
-sleep 10
+sleep 20
 
 # Check container status
 echo "Checking container status..."
@@ -45,6 +56,8 @@ if curl -s -f "http://localhost" > /dev/null; then
     echo "Application is responding successfully"
 else
     echo "Warning: Application is not responding on port 80"
+    echo "Checking container logs for potential issues..."
+    docker-compose logs
 fi
 
 echo -e "\nUseful commands:"
