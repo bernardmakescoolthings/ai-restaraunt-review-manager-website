@@ -39,7 +39,7 @@ export default function Home() {
     const email = formData.get('email')
 
     try {
-      const response = await fetch('http://184.169.224.124:8000/add_emails', {
+      const response = await fetch('/api/add_emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
