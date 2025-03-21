@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { ArrowRightIcon } from '@heroicons/react/24/outline'
-import { FormEvent } from 'react'
+import { FormEvent, useState } from 'react'
 
 interface Feature {
   name: string;
@@ -25,12 +25,42 @@ const features: Feature[] = [
 ]
 
 export default function Home() {
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // TODO: Add form submission logic
+    setIsLoading(true)
+    setError(null)
+    setSuccess(false)
+
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email')
-    console.log('Submitted email:', email)
+
+    try {
+      const response = await fetch('http://184.169.224.124:8000/add_emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          project_name: 'ai-resteraunt-review-manager',
+          email: email,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit email. Please try again.')
+      }
+
+      setSuccess(true)
+      e.currentTarget.reset() // Clear the form
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -103,17 +133,25 @@ export default function Home() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="min-w-0 flex-auto rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  disabled={isLoading}
+                  className="min-w-0 flex-auto rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Enter your email"
                 />
                 <button
                   type="submit"
-                  className="flex-none rounded-lg bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                  disabled={isLoading}
+                  className="flex-none rounded-lg bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Join Waitlist
-                  <ArrowRightIcon className="ml-2 -mr-1 h-5 w-5 inline-block" aria-hidden="true" />
+                  {isLoading ? 'Joining...' : 'Join Waitlist'}
+                  {!isLoading && <ArrowRightIcon className="ml-2 -mr-1 h-5 w-5 inline-block" aria-hidden="true" />}
                 </button>
               </form>
+              {error && (
+                <p className="mt-2 text-sm text-red-600">{error}</p>
+              )}
+              {success && (
+                <p className="mt-2 text-sm text-green-600">Thank you for joining our waitlist!</p>
+              )}
             </motion.div>
           </div>
         </div>
