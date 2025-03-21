@@ -45,8 +45,8 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          project_name: 'ai-resteraunt-review-manager',
-          email: email,
+          "project_name": "ai-resteraunt-review-manager",
+          "email": email,
         }),
       })
 
