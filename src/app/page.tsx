@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { ArrowRightIcon } from '@heroicons/react/24/outline'
-import { FormEvent, useState } from 'react'
+import { FormEvent, useState, useRef } from 'react'
 
 interface Feature {
   name: string;
@@ -28,6 +28,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -36,18 +37,30 @@ export default function Home() {
     setSuccess(false)
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get('email')
+    const email = formData.get('email') as string
+
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address')
+      setIsLoading(false)
+      return
+    }
 
     try {
+      const payload = {
+        "project_name": "ai-resteraunt-review-manager",
+        "email": email,
+      };
+      
+      console.log('Sending payload:', JSON.stringify(payload, null, 2));
+      
       const response = await fetch('/api/add_emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          "project_name": "ai-resteraunt-review-manager",
-          "email": email,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -55,7 +68,7 @@ export default function Home() {
       }
 
       setSuccess(true)
-      e.currentTarget.reset() // Clear the form
+      formRef.current?.reset() // Clear the form using the ref
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -123,7 +136,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <form onSubmit={handleSubmit} className="mx-auto flex max-w-md gap-x-4">
+              <form onSubmit={handleSubmit} ref={formRef} className="mx-auto flex max-w-md gap-x-4">
                 <label htmlFor="email-address" className="sr-only">
                   Email address
                 </label>
