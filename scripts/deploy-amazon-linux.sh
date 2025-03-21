@@ -17,7 +17,7 @@ sudo npm install -g pm2
 sudo yum install -y nginx
 
 # Create nginx configuration
-sudo tee /etc/nginx/conf.d/judy-app.conf > /dev/null <<EOL
+sudo tee /etc/nginx/conf.d/ai-restaurant-review.conf > /dev/null <<EOL
 server {
     listen 80;
     server_name _;
@@ -41,17 +41,21 @@ sudo systemctl start nginx
 sudo systemctl enable nginx
 
 # Create app directory
-mkdir -p /home/ec2-user/judy-app
-cd /home/ec2-user/judy-app
+mkdir -p /home/ec2-user/ai_restaraunt-review-manager-website
+cd /home/ec2-user/ai_restaraunt-review-manager-website
 
-# Install dependencies
+# Stop any existing PM2 processes for the app
+pm2 delete ai-restaurant-review 2>/dev/null || true
+
+# Clean install dependencies
+rm -rf node_modules package-lock.json
 npm install
 
 # Build the application
 npm run build
 
-# Start the application with PM2
-pm2 start npm --name "judy-app" -- start
+# Start the application with PM2 using the full npm command
+pm2 start "npm run start" --name ai-restaurant-review
 
 # Save PM2 process list
 pm2 save
@@ -65,5 +69,8 @@ if command -v firewall-cmd &> /dev/null; then
     sudo firewall-cmd --reload
 fi
 
-# Print completion message
-echo "Deployment completed! Your application should be running on http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)" 
+# Print completion message and logs
+echo "Deployment completed! Your application should be running on http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)"
+echo "Checking application logs..."
+sleep 5
+pm2 logs ai-restaurant-review --lines 50 
