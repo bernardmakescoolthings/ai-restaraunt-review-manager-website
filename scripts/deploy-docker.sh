@@ -16,6 +16,29 @@ export TAG="${2:-latest}"
 
 echo "Starting deployment process..."
 
+# Function to stop processes using a port
+stop_port() {
+    local port=$1
+    echo "Checking for processes using port $port..."
+    
+    # Try multiple methods to find and kill processes
+    if sudo lsof -i ":$port"; then
+        echo "Found processes using port $port, stopping them..."
+        sudo kill -9 $(sudo lsof -t -i":$port") 2>/dev/null || true
+        sudo fuser -k "${port}/tcp" 2>/dev/null || true
+    else
+        echo "No processes found using port $port"
+    fi
+    
+    # Double check
+    sleep 2
+    if sudo lsof -i ":$port" >/dev/null 2>&1; then
+        echo "WARNING: Port $port is still in use. Attempting forceful cleanup..."
+        sudo pkill -9 -f ".*:${port}" 2>/dev/null || true
+        sleep 2
+    fi
+}
+
 # Update system
 echo "Updating system packages..."
 sudo yum update -y
@@ -48,28 +71,26 @@ echo "Setting up application directory: $APP_DIR"
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 
-# Stop any process using port 3000
-echo "Checking for processes using port 3000..."
-if sudo lsof -i :3000; then
-    echo "Stopping processes using port 3000..."
-    sudo fuser -k 3000/tcp || true
-fi
-
-# Stop any process using port 80
-echo "Checking for processes using port 80..."
-if sudo lsof -i :80; then
-    echo "Stopping processes using port 80..."
-    sudo fuser -k 80/tcp || true
-fi
-
-# Stop and remove all containers
-echo "Stopping and removing all containers..."
+# Stop all Docker containers and clean up
+echo "Stopping all Docker containers..."
 docker-compose down --remove-orphans || true
-docker rm -f $(docker ps -aq) || true
+docker stop $(docker ps -aq) 2>/dev/null || true
+docker rm $(docker ps -aq) 2>/dev/null || true
 
 # Remove old volumes and networks
 echo "Cleaning up Docker system..."
 docker system prune -f --volumes
+
+# Stop processes on required ports
+stop_port 3000
+stop_port 80
+
+# Verify ports are free
+echo "Verifying ports are free..."
+if sudo lsof -i :3000 >/dev/null 2>&1 || sudo lsof -i :80 >/dev/null 2>&1; then
+    echo "ERROR: Unable to free required ports. Please check manually or restart the instance."
+    exit 1
+fi
 
 # Copy configuration files
 echo "Copying configuration files..."
