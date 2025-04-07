@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const { project_name, email } = body;
 
     // Forward the request to the actual API
-    const response = await fetch('http://13.57.40.112:8000/api/add_emails', {
+    const response = await fetch('http://replixe.com:8000/api/add_emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
